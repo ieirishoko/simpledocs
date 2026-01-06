@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Docs</title>
+    <!-- Google Fonts: Inter & Noto Sans JP -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <!-- Phosphor Icons (Simple & Clean Icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Crypto-JS (Security Library) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <!-- Firebase SDK (Cloud Sync) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- 初期設定画面 (Firebase Config) -->
+    <div id="setup-screen" class="screen">
+        <div class="setup-card">
+            <h1><i class="ph ph-cloud"></i> クラウド同期の設定</h1>
+            <p class="setup-steps">
+                1. <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a> でプロジェクトを作成
+                (無料)<br>
+                2. 「ウェブアプリを追加」して設定キーを取得<br>
+                3. 下記にコピー＆ペーストして「保存」
+            </p>
+            <textarea id="firebase-config-input"
+                placeholder='const firebaseConfig = { ... }; または { "apiKey": ... }'></textarea>
+            <button id="save-config-btn" class="btn-primary" style="width:100%">設定を保存して開始</button>
+            <p id="setup-error" class="error-msg"></p>
+        </div>
+    </div>
+
+    <!-- 認証画面 -->
+    <div id="auth-screen" class="screen active">
+        <div class="auth-card">
+            <div class="icon-wrapper">
+                <i class="ph ph-lock-key"></i>
+            </div>
+            <h1>Welcome Back</h1>
+            <p>ドキュメントを開くためのパスワードを入力してください</p>
+            <form id="login-form">
+                <input type="password" id="password-input" placeholder="Password" autofocus autocomplete="off">
+                <button type="submit" class="btn-primary">Unlock</button>
+            </form>
+            <p id="auth-error" class="error-msg"></p>
+
+            <!-- 初回のみ表示などの制御はJSで行うが、今回は簡易的に説明を表示 -->
+            <p class="hint-text">初期設定: 好きなパスワードで入れます（初回セットアップ）</p>
+        </div>
+    </div>
+
+    <!-- メインアプリ画面 -->
+    <div id="app-screen" class="screen">
+        <!-- 上部ヘッダー & タブバー -->
+        <header class="app-header">
+            <div class="logo-area">
+                <i class="ph ph-notebook use-accent"></i>
+                <span class="app-name">Simple Docs</span>
+            </div>
+
+            <nav class="tab-bar-container">
+                <div id="tab-list" class="tab-list">
+                    <!-- タブはJSで生成 -->
+                    <!-- <button class="tab active">仕事</button> -->
+                </div>
+                <button id="add-tab-btn" class="icon-btn" title="新しいタブを追加">
+                    <i class="ph ph-plus"></i>
+                </button>
+            </nav>
+
+            <div class="header-actions">
+                <button id="theme-toggle" class="icon-btn" title="テーマ切り替え">
+                    <i class="ph ph-moon"></i>
+                </button>
+                <button id="logout-btn" class="icon-btn" title="ロックする">
+                    <i class="ph ph-lock-open"></i>
+                </button>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <!-- 左サイドバー: ページリスト -->
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <h2 id="current-tab-name">ページ一覧</h2>
+                    <div class="sidebar-actions">
+                        <button id="edit-tab-name-btn" class="icon-btn-small" title="タブ名を変更">
+                            <i class="ph ph-pencil-simple"></i>
+                        </button>
+                        <button id="delete-tab-btn" class="icon-btn-small danger" title="タブを削除">
+                            <i class="ph ph-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="page-list" class="page-list">
+                    <!-- ページリストはJSで生成 -->
+                    <!-- <div class="page-item active">会議議事録 2024-01-06</div> -->
+                </div>
+
+                <button id="add-page-btn" class="btn-text-icon">
+                    <i class="ph ph-plus-circle"></i> 新しいページ
+                </button>
+            </aside>
+
+            <!-- メインエディタエリア -->
+            <main class="editor-area">
+                <div id="editor-wrapper" class="editor-wrapper">
+                    <!-- ページタイトル -->
+                    <input type="text" id="doc-title" class="doc-title-input" placeholder="無題のドキュメント">
+
+                    <!-- メタ情報 & ツールバー -->
+                    <div class="editor-toolbar">
+                        <div class="doc-meta">
+                            <span id="last-saved">保存済み</span>
+                        </div>
+                        <div class="view-toggles">
+                            <button id="mode-text-btn" class="toggle-btn active" title="テキストモード"><i
+                                    class="ph ph-article"></i></button>
+                            <button id="mode-grid-btn" class="toggle-btn" title="3列リストモード"><i
+                                    class="ph ph-table"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- 本文エディタ: テキストモード -->
+                    <textarea id="doc-body" class="doc-body-input" placeholder="ここに考えを書き出しましょう..."></textarea>
+
+                    <!-- 本文エディタ: 3列グリッドモード -->
+                    <div id="grid-editor" class="grid-editor hidden">
+                        <div class="grid-header">
+                            <input type="text" value="項目名" class="grid-th" readonly>
+                            <input type="text" value="内容1" class="grid-th" readonly>
+                            <input type="text" value="内容2" class="grid-th" readonly>
+                        </div>
+                        <div id="grid-rows" class="grid-rows">
+                            <!-- JSで生成 -->
+                        </div>
+                        <button id="add-row-btn" class="btn-text-small centered">+ 行を追加</button>
+                    </div>
+                </div>
+
+                <!-- ページ未選択時の表示 -->
+                <div id="empty-state" class="empty-state hidden">
+                    <i class="ph ph-files"></i>
+                    <p>ページを選択するか、新しく作成してください</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- シンプルなモーダル (確認用など) -->
+    <dialog id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">確認</h3>
+            <p id="modal-message">本当に実行しますか？</p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn-secondary">キャンセル</button>
+                <button id="modal-confirm" class="btn-primary">OK</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
