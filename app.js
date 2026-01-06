@@ -66,11 +66,36 @@ const els = {
     gridRows: document.getElementById('grid-rows'),
     addRowBtn: document.getElementById('add-row-btn'),
     modeTextBtn: document.getElementById('mode-text-btn'),
-    modeGridBtn: document.getElementById('mode-grid-btn')
+    modeGridBtn: document.getElementById('mode-grid-btn'),
+
+    // Sidebar
+    sidebar: document.querySelector('.sidebar'),
+    sidebarToggle: document.getElementById('sidebar-toggle')
 };
 
 // === 初期化フロー ===
 function init() {
+    // モバイルならサイドバーを初期状態で隠す
+    if (window.innerWidth <= 768) {
+        els.sidebar.classList.add('mobile-hidden');
+    }
+
+    // サイドバー開閉イベント
+    els.sidebarToggle.addEventListener('click', () => {
+        if (window.innerWidth <= 768) {
+            els.sidebar.classList.toggle('mobile-hidden');
+        } else {
+            els.sidebar.classList.toggle('closed');
+        }
+    });
+
+    // メインエリア（エディタ）をクリックしたら、モバイル時はサイドバーを閉じる（使いやすくする）
+    els.editorWrapper.addEventListener('click', () => {
+        if (window.innerWidth <= 768 && !els.sidebar.classList.contains('mobile-hidden')) {
+            els.sidebar.classList.add('mobile-hidden');
+        }
+    });
+
     // 1. Firebase設定の確認
     const configRaw = localStorage.getItem(FIREBASE_CONFIG_KEY);
 
